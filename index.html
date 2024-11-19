@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RawNote Workflow</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      padding: 0;
+      text-align: center;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    input[type="file"] {
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      background-color: #007BFF;
+      color: #fff;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }
+    #output {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px dashed #ddd;
+      background: #f9f9f9;
+      text-align: left;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>RawNote Workflow</h1>
+    <p>Upload an HTML file or ZIP file, and open it in <code>about:blank</code>.</p>
+    <input type="file" id="fileInput" accept=".html,.zip">
+    <button id="openButton" disabled>At Blank</button>
+    <div id="output"></div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const openButton = document.getElementById('openButton');
+    const outputDiv = document.getElementById('output');
+    let fileContent = '';
+
+    fileInput.addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+      if (!file) {
+        openButton.disabled = true;
+        return;
+      }
+
+      const fileName = file.name.toLowerCase();
+      if (fileName.endsWith('.html')) {
+        // Handle HTML files
+        fileContent = await file.text();
+        outputDiv.textContent = fileContent;
+        openButton.disabled = false;
+      } else if (fileName.endsWith('.zip')) {
+        // Handle ZIP files
+        const JSZip = await loadJSZip();
+        const zip = await JSZip.loadAsync(file);
+        if (zip.files['index.html']) {
+          fileContent = await zip.files['index.html'].async('string');
+          outputDiv.textContent = fileContent;
+          openButton.disabled = false;
+        } else {
+          outputDiv.textContent = 'No index.html found in the ZIP file.';
+          openButton.disabled = true;
+        }
+      } else {
+        outputDiv.textContent = 'Unsupported file type. Please upload an HTML or ZIP file.';
+        openButton.disabled = true;
+      }
+    });
+
+    openButton.addEventListener('click', () => {
+      if (fileContent) {
+        const newWindow = window.open('about:blank');
+        newWindow.document.write(fileContent);
+        newWindow.document.close();
+      }
+    });
+
+    async function loadJSZip() {
+      if (!window.JSZip) {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+        document.body.appendChild(script);
+        await new Promise((resolve) => (script.onload = resolve));
+      }
+      return window.JSZip;
+    }
+  </script>
+</body>
+</html>
